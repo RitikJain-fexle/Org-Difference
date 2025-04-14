@@ -30,13 +30,15 @@ jobs:
           if [ ! -f sfdx-project.json ]; then
             sf project generate --name MetadataCompare --default-package-dir force-app
           fi
-          mkdir -p force-app
+          mkdir -p force-app config/branches
           echo '{
             "packageDirectories": [
               {"path": "force-app", "default": true}
             ],
             "sourceApiVersion": "58.0"
           }' > sfdx-project.json
+          # Add sfdx-hardis configuration
+          echo "targetUsername: $ORG1_ALIAS" > config/branches/.sfdx-hardis.main.yml
 
       - name: Authenticate to Org1
         run: |
