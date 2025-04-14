@@ -22,7 +22,7 @@ jobs:
       - name: Install Salesforce CLI and Plugins
         run: |
           npm install -g @salesforce/cli
-          sf plugins install sfdx-git-delta --force
+          echo y | sf plugins install sfdx-git-delta
           echo y | sf plugins install sfdx-hardis@5.24.0
 
       - name: Create Salesforce DX Project and Prepare Directories
@@ -37,35 +37,6 @@ jobs:
             ],
             "sourceApiVersion": "58.0"
           }' > sfdx-project.json
-
-      - name: Create Package Manifest
-        run: |
-          cat <<'EOF' > package.xml
-          <?xml version="1.0" encoding="UTF-8"?>
-          <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-            <types>
-              <members>*</members>
-              <name>ApexClass</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>ApexTrigger</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>CustomObject</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>LightningComponentBundle</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>StaticResource</name>
-            </types>
-            <version>58.0</version>
-          </Package>
-          EOF
 
       - name: Authenticate to Org1
         run: |
@@ -85,7 +56,7 @@ jobs:
       - name: Retrieve Org2 Metadata via Hardis Plugin
         run: |
           mkdir -p org2-retrieve
-          sf hardis:org:retrieve:sources:dx -o $ORG2_ALIAS -p package.xml -f org2-retrieve
+          sf hardis:org:monitor:backup -o $ORG2_ALIAS --full --exclude-namespaces --full-apply-filters -f org2-retrieve
 
       - name: Generate Delta Package
         run: |
