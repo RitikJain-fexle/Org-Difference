@@ -50,16 +50,10 @@ jobs:
           sf org list
           sf org display --target-org $ORG1_ALIAS
 
-      - name: Debug Hardis Context
-        run: |
-          echo "Checking Hardis configuration and org context..."
-          sf hardis:config:get || true
-          sf hardis:org:diagnose --target-org $ORG1_ALIAS || true
-
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
-          sf hardis:org:retrieve:sources:dx --target-username $ORG1_ALIAS --output-dir org1-retrieve
+          sf hardis:org:monitor:backup --org-alias $ORG1_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org1-retrieve
 
       - name: Authenticate to Org2
         run: |
@@ -71,16 +65,10 @@ jobs:
           sf org list
           sf org display --target-org $ORG2_ALIAS
 
-      - name: Debug Hardis Context for Org2
-        run: |
-          echo "Checking Hardis configuration and org context for Org2..."
-          sf hardis:config:get || true
-          sf hardis:org:diagnose --target-org $ORG2_ALIAS || true
-
       - name: Retrieve Org2 Metadata via Hardis Plugin
         run: |
           mkdir -p org2-retrieve
-          sf hardis:org:retrieve:sources:dx --target-username $ORG2_ALIAS --output-dir org2-retrieve
+          sf hardis:org:monitor:backup --org-alias $ORG2_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org2-retrieve
 
       - name: Generate Delta Package
         run: |
