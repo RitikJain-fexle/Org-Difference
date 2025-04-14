@@ -10,88 +10,105 @@ jobs:
     env:
       ORG1_ALIAS: Org1
       ORG2_ALIAS: Org2
+      SFDX_PROJECT_DIR: sfdx-project
 
     steps:
-      # 1. Checkout the current repository.
+      # 1. Checkout the repository.
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2. Set up Node.js and install Salesforce CLI.
-      - name: Set up Node and Salesforce CLI
-        uses: actions/setup-node@v3
+      # 2. Set up Node.js.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: '20'
 
-      # 3. Install Salesforce CLI and Hardis Plugin.
-      - name: Install Salesforce CLI and Hardis Plugin
+      # 3. Install Salesforce CLI and plugins.
+      - name: Install Salesforce CLI and Plugins
         run: |
-          npm install --global @salesforce/cli
-          # Install the Hardis plugin; ensure that the plugin name is correct.
-          sf plugins install sfdx-hardis
+          npm install -g @salesforce/cli
+          sf plugins install @salesforce/plugin-packaging
+          sf plugins install sfdx-git-delta
+        continue-on-error: false
 
-      # 4. Authenticate to Org 1 using the provided Auth URL.
+      # 4. Create Salesforce DX project structure.
+      - name: Create Salesforce DX Project
+        run: |
+          mkdir -p $SFDX_PROJECT_DIR
+          sf project generate --name metadata-comparison --default-package-dir force-app
+          cd $SFDX_PROJECT_DIR
+          git init
+          git checkout -b main
+
+      # 5. Authenticate to Org 1.
       - name: Authenticate to Org 1
         run: |
-          # Create an authentication file for Org1.
-          # The secret SFDX_AUTH_ORG1_URL must be a plain text string in the format:
-          # force://<clientId>:<clientSecret>:<refreshToken>@<instanceUrl>
-          # Note: If your client secret is empty, update the value to include a placeholder (e.g., dummySecret)
-          echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
-          # Perform authentication.
+          echo "${{ secrets.SFDX_AUTH_ORG1_JSON }}" > auth-org1.txt
           sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
-      # 5. Retrieve Metadata from Org 1.
+      # 6. Retrieve Metadata from Org 1.
       - name: Retrieve Metadata from Org 1
         run: |
-          mkdir -p metadata-org1
-          cd metadata-org1
-          # Retrieve metadata using the Hardis plugin.
-          sf hardis:retrieve -u $ORG1_ALIAS -n "FullRetrieveOrg1"
+          sf project retrieve start --target-org $ORG1_ALIAS --metadata-dir force-app/main/default --wait 30
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
-      # 6. Commit Org 1 metadata to branch 'main'.
-      - name: Commit Org 1 Metadata on main branch
+      # 7. Commit Org 1 metadata to 'main' branch.
+      - name: Commit Org 1 Metadata
         run: |
-          git config --global user.email "bot@example.com"
-          git config --global user.name "GitHub Action Bot"
-          git checkout main || git checkout -b main
-          # Copy retrieved metadata to the project source folder (adjust "force-app" if needed)
-          rsync -a metadata-org1/ force-app/
+          git config --global user.email "github-action@users.noreply.github.com"
+          git config --global user.name "GitHub Action"
           git add .
-          git commit -m "Org1 metadata retrieved" || echo "No changes in Org1 metadata"
+          git commit -m "Retrieved metadata from Org1" || echo "No changes to commit for Org1"
           git push origin main
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
-      # 7. Authenticate to Org 2 using the provided Auth URL.
+      # 8. Authenticate to Org 2.
       - name: Authenticate to Org 2
         run: |
-          echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
-          sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS --set-default
+          echo "${{ secrets.SFDX_AUTH_ORG2_JSON }}" > auth-org2.txt
+          sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
-      # 8. Retrieve Metadata from Org 2.
+      # 9. Retrieve Metadata from Org 2.
       - name: Retrieve Metadata from Org 2
         run: |
-          mkdir -p metadata-org2
-          cd metadata-org2
-          sf hardis:retrieve -u $ORG2_ALIAS -n "FullRetrieveOrg2"
+          git checkout -b org2
+          sf project retrieve start --target-org $ORG2_ALIAS --metadata-dir force-app/main/default --wait 30
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
-      # 9. Commit Org 2 metadata to branch 'org2'.
-      - name: Commit Org 2 Metadata on branch org2
+      # 10. Commit Org 2 metadata to 'org2' branch.
+      - name: Commit Org 2 Metadata
         run: |
-          git checkout -B org2
-          rsync -a --delete metadata-org2/ force-app/
           git add .
-          git commit -m "Org2 metadata retrieved" || echo "No changes in Org2 metadata"
-          git push origin org2 --force
+          git commit -m "Retrieved metadata from Org2" || echo "No changes to commit for Org2"
+          git push origin org2
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
-      # 10. Compare the metadata between the two branches.
-      - name: Compare Metadata Differences Between Org1 and Org2
+      # 11. Generate metadata differences and package.xml.
+      - name: Generate Metadata Differences
         run: |
+          mkdir -p delta
+          sf sgd source delta --from main --to org2 --output delta --generate-delta
+          echo "Metadata differences and package.xml generated in delta/ directory:"
+          ls -la delta/
           git diff main org2 > metadata-diff.txt
-          echo "Differences saved to metadata-diff.txt:"
+          echo "Raw git diff saved to metadata-diff.txt:"
           cat metadata-diff.txt
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
-      # 11. Upload the diff output as an artifact.
-      - name: Upload Comparison Artifact
+      # 12. Upload artifacts (diff and delta package).
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: metadata-diff
-          path: metadata-diff.txt
+          name: metadata-comparison-artifacts
+          path: |
+            ${{ env.SFDX_PROJECT_DIR }}/metadata-diff.txt
+            ${{ env.SFDX_PROJECT_DIR }}/delta/
+
+      # 13. Clean up sensitive files.
+      - name: Clean Up
+        run: |
+          rm -f auth-org1.txt auth-org2.txt
+        working-directory: ${{ env.SFDX_PROJECT_DIR }}
+        if: always()
