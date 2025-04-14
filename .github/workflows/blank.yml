@@ -53,8 +53,11 @@ jobs:
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
+          # Generate config file for main branch
+          mkdir -p config/branches
+          echo "targetUsername: $ORG1_ALIAS" > config/branches/.sfdx-hardis.main.yml
           sf hardis:org:monitor:backup --target-org $ORG1_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org1-retrieve
-          
+
       - name: Authenticate to Org2
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
@@ -68,7 +71,10 @@ jobs:
       - name: Retrieve Org2 Metadata via Hardis Plugin
         run: |
           mkdir -p org2-retrieve
-          sf hardis:org:monitor:backup --org-alias $ORG2_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org2-retrieve
+          # Update config file for main branch to point to Org2
+          mkdir -p config/branches
+          echo "targetUsername: $ORG2_ALIAS" > config/branches/.sfdx-hardis.main.yml
+          sf hardis:org:monitor:backup --target-org $ORG2_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org2-retrieve
 
       - name: Generate Delta Package
         run: |
