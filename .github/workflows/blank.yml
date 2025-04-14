@@ -50,6 +50,10 @@ jobs:
           sf org list
           sf org display --target-org $ORG1_ALIAS
 
+      - name: SF org1 Login
+        run: |
+          echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" | sf org login access-token --instance-url https://fexleservicepvtltd65-dev-ed.develop.my.salesforce.com --no-prompt
+
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
