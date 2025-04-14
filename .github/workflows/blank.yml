@@ -23,7 +23,8 @@ jobs:
         run: |
           npm install -g @salesforce/cli
           sf plugins install sfdx-git-delta --force
-          sf plugins install sfdx-hardis --force
+      - name: Install SFDX Hardis plugin
+              run: echo y | sf plugins install sfdx-hardis@5.24.0
 
       - name: Create Salesforce DX Project and Prepare Directories
         run: |
