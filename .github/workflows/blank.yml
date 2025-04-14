@@ -75,7 +75,7 @@ jobs:
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
-          sf hardis:org:retrieve:sources:dx -o $ORG1_ALIAS -p package.xml -f org1-retrieve
+          sf hardis:org:monitor:backup -o $ORG1_ALIAS --full --exclude-namespaces --full-apply-filters -f org1-retrieve
 
       - name: Authenticate to Org2
         run: |
