@@ -37,6 +37,10 @@ jobs:
             "sourceApiVersion": "58.0"
           }' > sfdx-project.json
 
+      - name: Prepare Package Directories
+        run: |
+          mkdir -p org1-metadata org2-metadata
+
       - name: Authenticate to Org1
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
@@ -44,7 +48,6 @@ jobs:
 
       - name: Retrieve Org1 Metadata
         run: |
-          mkdir -p org1-metadata
           sf project retrieve start --target-org $ORG1_ALIAS --output-dir org1-metadata
 
       - name: Authenticate to Org2
@@ -54,7 +57,6 @@ jobs:
 
       - name: Retrieve Org2 Metadata
         run: |
-          mkdir -p org2-metadata
           sf project retrieve start --target-org $ORG2_ALIAS --output-dir org2-metadata
 
       - name: Generate Delta Package
@@ -71,5 +73,5 @@ jobs:
           path: delta/
 
       - name: Clean Up
-        run: rm -f auth-org*.txt
         if: always()
+        run: rm -f auth-org*.txt
