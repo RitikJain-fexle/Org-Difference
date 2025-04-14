@@ -83,7 +83,7 @@ jobs:
         run: |
           mkdir -p org1-retrieve
           # Use the Hardis plugin command to retrieve metadata via the manifest file.
-          sfdx hardis:source:retrieve -x package.xml -u $ORG1_ALIAS -d org1-retrieve
+          SFDX_RETRIEVE_WAIT_MINUTES=200 sf hardis:org:retrieve:sources:metadata target-org -o $ORG1_ALIAS -d org1-retrieve
 
       - name: Authenticate to Org2
         run: |
