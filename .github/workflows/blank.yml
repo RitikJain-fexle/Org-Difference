@@ -21,85 +21,44 @@ jobs:
 
       - name: Install Salesforce CLI and Plugins
         run: |
-          # Install the Salesforce CLI
           npm install -g @salesforce/cli
-          # Install the git-delta plugin
           sf plugins install sfdx-git-delta
-          # Install the Hardis plugin for metadata retrieval
-          sf plugins install sfdx-hardis
+          sf plugins install @hardisgroupcom/sfdx-hardis
 
-      - name: Create Salesforce DX Project and Prepare Directories
+      - name: Create Salesforce DX Project
         run: |
-          # Generate a minimal Salesforce DX project if not already present.
           if [ ! -f sfdx-project.json ]; then
             sf project generate --name MetadataCompare --default-package-dir force-app
           fi
-          # Ensure that the default directory exists as declared
-          mkdir -p force-app
-          # Overwrite sfdx-project.json with a minimal configuration to avoid conflicts
           echo '{
-            "packageDirectories": [
-              {"path": "force-app", "default": true}
-            ],
+            "packageDirectories": [{"path": "force-app", "default": true}],
             "sourceApiVersion": "58.0"
           }' > sfdx-project.json
-
-      - name: Create Package Manifest
-        run: |
-          cat <<'EOF' > package.xml
-          <?xml version="1.0" encoding="UTF-8"?>
-          <Package xmlns="http://soap.sforce.com/2006/04/metadata">
-            <types>
-              <members>*</members>
-              <name>ApexClass</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>ApexTrigger</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>CustomObject</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>LightningComponentBundle</name>
-            </types>
-            <types>
-              <members>*</members>
-              <name>StaticResource</name>
-            </types>
-            <!-- Add additional metadata types as needed -->
-            <version>58.0</version>
-          </Package>
-          EOF
 
       - name: Authenticate to Org1
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
           sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
 
-      - name: Retrieve Org1 Metadata via Hardis Plugin
+      - name: Retrieve Org1 Metadata
         run: |
-          mkdir -p org1-retrieve
-          # Use the Hardis plugin command to retrieve metadata via the manifest file.
-          sfdx hardis:source:retrieve -x package.xml -u $ORG1_ALIAS -d org1-retrieve
+          mkdir -p org1-metadata
+          sf hardis:org:retrieve --target-org $ORG1_ALIAS --output-dir org1-metadata
 
       - name: Authenticate to Org2
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
           sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS
 
-      - name: Retrieve Org2 Metadata via Hardis Plugin
+      - name: Retrieve Org2 Metadata
         run: |
-          mkdir -p org2-retrieve
-          sfdx hardis:source:retrieve -x package.xml -u $ORG2_ALIAS -d org2-retrieve
+          mkdir -p org2-metadata
+          sf hardis:org:retrieve --target-org $ORG2_ALIAS --output-dir org2-metadata
 
       - name: Generate Delta Package
         run: |
           mkdir -p delta
-          # Compare the two retrieved metadata directories using the git-delta plugin.
-          sf sgd source delta --source org1-retrieve --target org2-retrieve --output delta
+          sf sgd source delta --source org1-metadata --target org2-metadata --output delta
           echo "Generated delta package:"
           ls -la delta/
 
