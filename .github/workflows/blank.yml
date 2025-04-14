@@ -19,28 +19,30 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Salesforce CLI and Plugin
+      - name: Install Salesforce CLI and Plugins
         run: |
+          # Install the Salesforce CLI
           npm install -g @salesforce/cli
+          # Install the git-delta plugin
           sf plugins install sfdx-git-delta
+          # Install the Hardis plugin for metadata retrieval
+          sf plugins install sfdx-hardis
 
-      - name: Create Salesforce DX Project
+      - name: Create Salesforce DX Project and Prepare Directories
         run: |
           # Generate a minimal Salesforce DX project if not already present.
           if [ ! -f sfdx-project.json ]; then
             sf project generate --name MetadataCompare --default-package-dir force-app
           fi
-          # Ensure the default folder exists
+          # Ensure that the default directory exists as declared
           mkdir -p force-app
-          # Create minimal sfdx-project.json if needed.
-          if [ ! -f sfdx-project.json ]; then
-            echo '{
-              "packageDirectories": [
-                {"path": "force-app", "default": true}
-              ],
-              "sourceApiVersion": "58.0"
-            }' > sfdx-project.json
-          fi
+          # Overwrite sfdx-project.json with a minimal configuration to avoid conflicts
+          echo '{
+            "packageDirectories": [
+              {"path": "force-app", "default": true}
+            ],
+            "sourceApiVersion": "58.0"
+          }' > sfdx-project.json
 
       - name: Create Package Manifest
         run: |
@@ -77,26 +79,26 @@ jobs:
           echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
           sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
 
-      - name: Retrieve Org1 Metadata
+      - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
-          # Using manifest-based retrieve so that source tracking isn’t required
-          sfdx force:source:retrieve -x package.xml -u $ORG1_ALIAS --target-metadata-dir org1-retrieve
+          # Use the Hardis plugin command to retrieve metadata via the manifest file.
+          sfdx hardis:source:retrieve -x package.xml -u $ORG1_ALIAS -d org1-retrieve
 
       - name: Authenticate to Org2
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
           sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS
 
-      - name: Retrieve Org2 Metadata
+      - name: Retrieve Org2 Metadata via Hardis Plugin
         run: |
           mkdir -p org2-retrieve
-          sfdx force:source:retrieve -x package.xml -u $ORG2_ALIAS --target-metadata-dir org2-retrieve
+          sfdx hardis:source:retrieve -x package.xml -u $ORG2_ALIAS -d org2-retrieve
 
       - name: Generate Delta Package
         run: |
           mkdir -p delta
-          # Compare the retrieved metadata directories and generate the delta package
+          # Compare the two retrieved metadata directories using the git-delta plugin.
           sf sgd source delta --source org1-retrieve --target org2-retrieve --output delta
           echo "Generated delta package:"
           ls -la delta/
