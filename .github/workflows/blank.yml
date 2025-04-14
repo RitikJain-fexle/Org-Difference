@@ -12,101 +12,55 @@ jobs:
       ORG2_ALIAS: Org2
 
     steps:
-      # 1. Checkout the repository.
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Set up Node.js.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 3. Install Salesforce CLI and plugins.
       - name: Install Salesforce CLI and Plugins
         run: |
           npm install -g @salesforce/cli
-          sf plugins install sfdx-hardis
           sf plugins install sfdx-git-delta
-        continue-on-error: false
 
-      # 4. Create Salesforce DX project structure.
-      - name: Create Salesforce DX Project
+      - name: Create Metadata Directories
         run: |
-          sf project generate --name metadata-comparison --default-package-dir force-app
-          git add .
-          git commit -m "Initial DX project structure" || echo "No changes to commit"
+          mkdir -p org1-metadata org2-metadata
 
-      # 5. Authenticate to Org1.
       - name: Authenticate to Org1
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
           sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
 
-      # 6. Create branch for Org1 metadata.
-      - name: Create branch for Org1 metadata
-        run: |
-          git checkout -b org1-metadata
-
-      # 7. Retrieve Metadata from Org1.
       - name: Retrieve Metadata from Org1
         run: |
-          sf hardis:org:retrieve:sources:metadata --target-org $ORG1_ALIAS
+          sf project retrieve start --target-org $ORG1_ALIAS --output-dir org1-metadata
 
-      # 8. Commit and push Org1 metadata.
-      - name: Commit and push Org1 metadata
-        run: |
-          git config --global user.email "github-action@users.noreply.github.com"
-          git config --global user.name "GitHub Action"
-          git add .
-          git commit -m "Retrieved metadata from Org1" || echo "No changes to commit"
-          git push origin org1-metadata
-
-      # 9. Authenticate to Org2.
       - name: Authenticate to Org2
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
-          sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS
+          sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS --set-default
 
-      # 10. Create branch for Org2 metadata.
-      - name: Create branch for Org2 metadata
-        run: |
-          git checkout main
-          git checkout -b org2-metadata
-
-      # 11. Retrieve Metadata from Org2.
       - name: Retrieve Metadata from Org2
         run: |
-          sf hardis:org:retrieve:sources:metadata --target-org $ORG2_ALIAS
+          sf project retrieve start --target-org $ORG2_ALIAS --output-dir org2-metadata
 
-      # 12. Commit and push Org2 metadata.
-      - name: Commit and push Org2 metadata
-        run: |
-          git add .
-          git commit -m "Retrieved metadata from Org2" || echo "No changes to commit"
-          git push origin org2-metadata
-
-      # 13. Generate metadata differences.
-      - name: Generate metadata differences
+      - name: Generate Metadata Differences
         run: |
           mkdir -p delta
-          sf sgd source delta --from org2-metadata --to org1-metadata --output delta --generate-delta
-          echo "Metadata differences and package.xml generated in delta/ directory:"
+          sf sgd source delta --source org1-metadata --target org2-metadata --output delta
+          echo "Generated package.xml and metadata differences:"
           ls -la delta/
-          git diff org1-metadata org2-metadata > metadata-diff.txt
-          echo "Raw git diff saved to metadata-diff.txt:"
-          cat metadata-diff.txt
 
-      # 14. Upload artifacts.
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: metadata-comparison-artifacts
           path: |
-            metadata-diff.txt
             delta/
 
-      # 15. Clean up sensitive files.
       - name: Clean Up
         run: |
           rm -f auth-org1.txt auth-org2.txt
