@@ -37,18 +37,14 @@ jobs:
         run: |
           mkdir -p metadata-org1
           cd metadata-org1
-          # The following command assumes a full metadata retrieve command via sfdx hardis
-          sfdx hardis:retrieve -u $ORG1_ALIAS -n "FullRetrieveOrg1" 
-          # Adjust the above command parameters as needed for your retrieve request.
+          sfdx hardis:retrieve -u $ORG1_ALIAS -n "FullRetrieveOrg1"
 
       # 4. Commit the Org 1 metadata into branch 'main'
       - name: Commit Org 1 Metadata on main branch
         run: |
           git config --global user.email "bot@example.com"
           git config --global user.name "GitHub Action Bot"
-          # Ensure we are on main
           git checkout main || git checkout -b main
-          # Copy retrieved metadata files to your tracked source folder (e.g., force-app)
           rsync -a metadata-org1/ force-app/
           git add .
           git commit -m "Org1 metadata retrieved" || echo "No changes in Org1 metadata"
@@ -64,31 +60,27 @@ jobs:
         run: |
           mkdir -p metadata-org2
           cd metadata-org2
-          # The command assumes the Hardis plugin retrieval process for the second org.
           sfdx hardis:retrieve -u $ORG2_ALIAS -n "FullRetrieveOrg2"
-          # Adjust as needed.
 
       # 6. Commit Org 2 metadata in branch 'org2'
       - name: Commit Org 2 Metadata on branch 'org2'
         run: |
           git checkout -B org2
-          # Clean out current source folder if needed; then copy new metadata
           rsync -a --delete metadata-org2/ force-app/
           git add .
           git commit -m "Org2 metadata retrieved" || echo "No changes in Org2 metadata"
           git push origin org2 --force
 
-      # 7. Compare the metadata between the two branches (using Git diff here)
+      # 7. Compare the metadata between the two branches
       - name: Compare Metadata Differences Between Org1 and Org2
         run: |
           git diff main org2 > metadata-diff.txt
           echo "Differences saved to metadata-diff.txt:"
           cat metadata-diff.txt
 
-      # 8. Upload the diff output as an artifact for review
-    - name: Upload Artifact
-    uses: actions/upload-artifact@v4
-    with:
-    name: my-artifact
-    path: path/to/artifact
-
+      # 8. Upload the diff output as an artifact
+      - name: Upload Comparison Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: metadata-diff
+          path: metadata-diff.txt
