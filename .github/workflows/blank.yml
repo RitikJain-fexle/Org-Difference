@@ -12,58 +12,66 @@ jobs:
       ORG2_ALIAS: Org2
 
     steps:
-      # 1. Checkout the current repository
-      - name: Checkout repository
+      # 1. Checkout the current repository.
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # 2. Set up Node.js and install the Salesforce CLI along with the Hardis plugin
+      # 2. Set up Node.js and install Salesforce CLI.
       - name: Set up Node and Salesforce CLI
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
+      # 3. Install Salesforce CLI and the Hardis plugin.
       - name: Install Salesforce CLI and Hardis Plugin
         run: |
           npm install --global @salesforce/cli
+          # Install the Hardis plugin (ensure the plugin name is correct)
           sf plugins install sfdx-hardis
 
-      # 3. Authenticate to Org 1 and retrieve metadata
+      # 4. Authenticate to Org 1 using the provided Auth URL.
       - name: Authenticate to Org 1
         run: |
-          echo "${{ secrets.SFDX_AUTH_ORG1_JSON }}" > auth-org1.json
-          sf org login sfdx-url --sfdx-url-file auth-org1.json --alias $ORG1_ALIAS --set-default
+          # Create a file containing the plain Auth URL for Org 1.
+          echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
+          # Use the Salesforce CLI to log in using the auth URL.
+          sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
 
+      # 5. Retrieve Metadata from Org 1.
       - name: Retrieve Metadata from Org 1
         run: |
           mkdir -p metadata-org1
           cd metadata-org1
+          # Retrieve metadata using the Hardis plugin.
           sf hardis:retrieve -u $ORG1_ALIAS -n "FullRetrieveOrg1"
 
-      # 4. Commit the Org 1 metadata into branch 'main'
+      # 6. Commit Org 1 metadata to the main branch.
       - name: Commit Org 1 Metadata on main branch
         run: |
           git config --global user.email "bot@example.com"
           git config --global user.name "GitHub Action Bot"
           git checkout main || git checkout -b main
+          # Copy metadata files (adjust the target folder if necessary)
           rsync -a metadata-org1/ force-app/
           git add .
           git commit -m "Org1 metadata retrieved" || echo "No changes in Org1 metadata"
           git push origin main
 
-      # 5. Authenticate to Org 2 and retrieve metadata
+      # 7. Authenticate to Org 2 using its Auth URL.
       - name: Authenticate to Org 2
         run: |
-          echo "${{ secrets.SFDX_AUTH_ORG2_JSON }}" > auth-org2.json
-          sf org login sfdx-url --sfdx-url-file auth-org2.json --alias $ORG2_ALIAS --set-default
+          echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
+          sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS --set-default
 
+      # 8. Retrieve Metadata from Org 2.
       - name: Retrieve Metadata from Org 2
         run: |
           mkdir -p metadata-org2
           cd metadata-org2
           sf hardis:retrieve -u $ORG2_ALIAS -n "FullRetrieveOrg2"
 
-      # 6. Commit Org 2 metadata in branch 'org2'
-      - name: Commit Org 2 Metadata on branch 'org2'
+      # 9. Commit Org 2 metadata on a separate branch (org2).
+      - name: Commit Org 2 Metadata on branch org2
         run: |
           git checkout -B org2
           rsync -a --delete metadata-org2/ force-app/
@@ -71,14 +79,14 @@ jobs:
           git commit -m "Org2 metadata retrieved" || echo "No changes in Org2 metadata"
           git push origin org2 --force
 
-      # 7. Compare the metadata between the two branches
+      # 10. Compare the metadata between the two branches.
       - name: Compare Metadata Differences Between Org1 and Org2
         run: |
           git diff main org2 > metadata-diff.txt
           echo "Differences saved to metadata-diff.txt:"
           cat metadata-diff.txt
 
-      # 8. Upload the diff output as an artifact
+      # 11. Upload the diff output as an artifact.
       - name: Upload Comparison Artifact
         uses: actions/upload-artifact@v4
         with:
