@@ -45,10 +45,11 @@ jobs:
           echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
           sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
 
-      - name: Login to SF environment
+      - name: Verify Org1 Authentication
         run: |
-          echo "$SFDX_AUTH_ORG1_URL" | sf org login web --set-default --alias ORG1_ALIAS --browser chrome
-                
+          sf org list
+          sf org display --target-org $ORG1_ALIAS
+
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
@@ -58,6 +59,11 @@ jobs:
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
           sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS
+
+      - name: Verify Org2 Authentication
+        run: |
+          sf org list
+          sf org display --target-org $ORG2_ALIAS
 
       - name: Retrieve Org2 Metadata via Hardis Plugin
         run: |
