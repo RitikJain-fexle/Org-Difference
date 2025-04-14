@@ -22,19 +22,22 @@ jobs:
         with:
           node-version: 18
 
-      # 3. Install Salesforce CLI and the Hardis plugin.
+      # 3. Install Salesforce CLI and Hardis Plugin.
       - name: Install Salesforce CLI and Hardis Plugin
         run: |
           npm install --global @salesforce/cli
-          # Install the Hardis plugin (ensure the plugin name is correct)
+          # Install the Hardis plugin; ensure that the plugin name is correct.
           sf plugins install sfdx-hardis
 
       # 4. Authenticate to Org 1 using the provided Auth URL.
       - name: Authenticate to Org 1
         run: |
-          # Create a file containing the plain Auth URL for Org 1.
+          # Create an authentication file for Org1.
+          # The secret SFDX_AUTH_ORG1_URL must be a plain text string in the format:
+          # force://<clientId>:<clientSecret>:<refreshToken>@<instanceUrl>
+          # Note: If your client secret is empty, update the value to include a placeholder (e.g., dummySecret)
           echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
-          # Use the Salesforce CLI to log in using the auth URL.
+          # Perform authentication.
           sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
 
       # 5. Retrieve Metadata from Org 1.
@@ -45,19 +48,19 @@ jobs:
           # Retrieve metadata using the Hardis plugin.
           sf hardis:retrieve -u $ORG1_ALIAS -n "FullRetrieveOrg1"
 
-      # 6. Commit Org 1 metadata to the main branch.
+      # 6. Commit Org 1 metadata to branch 'main'.
       - name: Commit Org 1 Metadata on main branch
         run: |
           git config --global user.email "bot@example.com"
           git config --global user.name "GitHub Action Bot"
           git checkout main || git checkout -b main
-          # Copy metadata files (adjust the target folder if necessary)
+          # Copy retrieved metadata to the project source folder (adjust "force-app" if needed)
           rsync -a metadata-org1/ force-app/
           git add .
           git commit -m "Org1 metadata retrieved" || echo "No changes in Org1 metadata"
           git push origin main
 
-      # 7. Authenticate to Org 2 using its Auth URL.
+      # 7. Authenticate to Org 2 using the provided Auth URL.
       - name: Authenticate to Org 2
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
@@ -70,7 +73,7 @@ jobs:
           cd metadata-org2
           sf hardis:retrieve -u $ORG2_ALIAS -n "FullRetrieveOrg2"
 
-      # 9. Commit Org 2 metadata on a separate branch (org2).
+      # 9. Commit Org 2 metadata to branch 'org2'.
       - name: Commit Org 2 Metadata on branch org2
         run: |
           git checkout -B org2
