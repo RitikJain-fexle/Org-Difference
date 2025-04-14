@@ -20,48 +20,56 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Salesforce CLI and Plugins
+      - name: Install Salesforce CLI
         run: |
           npm install -g @salesforce/cli
           sf plugins install sfdx-git-delta
 
-      - name: Create Metadata Directories
+      - name: Create Salesforce DX Project
         run: |
-          mkdir -p org1-metadata org2-metadata
+          sf project generate --name MetadataCompare --default-package-dir force-app
+          # Configure multiple package directories
+          echo '{
+            "packageDirectories": [
+              {"path": "org1-metadata", "default": true},
+              {"path": "org2-metadata"}
+            ],
+            "sourceApiVersion": "58.0"
+          }' > sfdx-project.json
 
       - name: Authenticate to Org1
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG1_URL }}" > auth-org1.txt
           sf org login sfdx-url --sfdx-url-file auth-org1.txt --alias $ORG1_ALIAS --set-default
 
-      - name: Retrieve Metadata from Org1
+      - name: Retrieve Org1 Metadata
         run: |
+          mkdir -p org1-metadata
           sf project retrieve start --target-org $ORG1_ALIAS --output-dir org1-metadata
 
       - name: Authenticate to Org2
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
-          sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS --set-default
+          sf org login sfdx-url --sfdx-url-file auth-org2.txt --alias $ORG2_ALIAS
 
-      - name: Retrieve Metadata from Org2
+      - name: Retrieve Org2 Metadata
         run: |
+          mkdir -p org2-metadata
           sf project retrieve start --target-org $ORG2_ALIAS --output-dir org2-metadata
 
-      - name: Generate Metadata Differences
+      - name: Generate Delta Package
         run: |
           mkdir -p delta
           sf sgd source delta --source org1-metadata --target org2-metadata --output delta
-          echo "Generated package.xml and metadata differences:"
+          echo "Generated delta package:"
           ls -la delta/
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: metadata-comparison-artifacts
-          path: |
-            delta/
+          name: metadata-delta-package
+          path: delta/
 
       - name: Clean Up
-        run: |
-          rm -f auth-org1.txt auth-org2.txt
+        run: rm -f auth-org*.txt
         if: always()
