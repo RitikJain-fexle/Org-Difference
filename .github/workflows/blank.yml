@@ -50,7 +50,7 @@ jobs:
       # 6. Retrieve Metadata from Org 1.
       - name: Retrieve Metadata from Org 1
         run: |
-          sf project retrieve start --target-org $ORG1_ALIAS --metadata-dir force-app/main/default --wait 30
+          sf project retrieve start --target-org $ORG1_ALIAS --target-metadata-dir force-app/main/default --wait 30
         working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
       # 7. Commit Org 1 metadata to 'main' branch.
@@ -74,7 +74,7 @@ jobs:
       - name: Retrieve Metadata from Org 2
         run: |
           git checkout -b org2
-          sf project retrieve start --target-org $ORG2_ALIAS --metadata-dir force-app/main/default --wait 30
+          sf project retrieve start --target-org $ORG2_ALIAS --target-metadata-dir force-app/main/default --wait 30
         working-directory: ${{ env.SFDX_PROJECT_DIR }}
 
       # 10. Commit Org 2 metadata to 'org2' branch.
