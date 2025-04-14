@@ -27,19 +27,15 @@ jobs:
 
       - name: Create Salesforce DX Project
         run: |
+          # Generate a basic Salesforce DX project
           sf project generate --name MetadataCompare --default-package-dir force-app
-          # Configure multiple package directories
+          # Overwrite sfdx-project.json with a config that does not create conflicts
           echo '{
             "packageDirectories": [
-              {"path": "org1-metadata", "default": true},
-              {"path": "org2-metadata"}
+              {"path": "force-app", "default": true}
             ],
             "sourceApiVersion": "58.0"
           }' > sfdx-project.json
-
-      - name: Prepare Package Directories
-        run: |
-          mkdir -p org1-metadata org2-metadata
 
       - name: Authenticate to Org1
         run: |
@@ -48,7 +44,8 @@ jobs:
 
       - name: Retrieve Org1 Metadata
         run: |
-          sf project retrieve start --target-org $ORG1_ALIAS --output-dir org1-metadata
+          # Use a non-conflicting directory for retrieval
+          sf project retrieve start --target-org $ORG1_ALIAS --output-dir org1-retrieve
 
       - name: Authenticate to Org2
         run: |
@@ -57,12 +54,14 @@ jobs:
 
       - name: Retrieve Org2 Metadata
         run: |
-          sf project retrieve start --target-org $ORG2_ALIAS --output-dir org2-metadata
+          # Use a non-conflicting directory for retrieval
+          sf project retrieve start --target-org $ORG2_ALIAS --output-dir org2-retrieve
 
       - name: Generate Delta Package
         run: |
           mkdir -p delta
-          sf sgd source delta --source org1-metadata --target org2-metadata --output delta
+          # Compare the two retrieved directories to generate the difference package
+          sf sgd source delta --source org1-retrieve --target org2-retrieve --output delta
           echo "Generated delta package:"
           ls -la delta/
 
