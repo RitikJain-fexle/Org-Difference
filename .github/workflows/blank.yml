@@ -53,7 +53,7 @@ jobs:
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
-          sf hardis:org:monitor:backup -o $ORG1_ALIAS --full --exclude-namespaces --full-apply-filters -f org1-retrieve
+          sf hardis:org:monitor:backup --org-alias $ORG1_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org1-retrieve
 
       - name: Authenticate to Org2
         run: |
@@ -68,7 +68,7 @@ jobs:
       - name: Retrieve Org2 Metadata via Hardis Plugin
         run: |
           mkdir -p org2-retrieve
-          sf hardis:org:monitor:backup -o $ORG2_ALIAS --full --exclude-namespaces --full-apply-filters -f org2-retrieve
+          sf hardis:org:monitor:backup --org-alias $ORG2_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org2-retrieve
 
       - name: Generate Delta Package
         run: |
