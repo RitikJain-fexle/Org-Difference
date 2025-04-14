@@ -20,16 +20,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Salesforce CLI
+      - name: Install Salesforce CLI and Plugin
         run: |
           npm install -g @salesforce/cli
           sf plugins install sfdx-git-delta
 
-      - name: Create Salesforce DX Project
+      - name: Create Salesforce DX Project and Prepare Directories
         run: |
-          # Generate a basic Salesforce DX project
+          # Generate the project with default package directory "force-app"
           sf project generate --name MetadataCompare --default-package-dir force-app
-          # Overwrite sfdx-project.json with a config that does not create conflicts
+          # Ensure the "force-app" folder exists as declared in the configuration
+          mkdir -p force-app
+          # Overwrite sfdx-project.json with a configuration that only declares a single, existing package directory
           echo '{
             "packageDirectories": [
               {"path": "force-app", "default": true}
@@ -44,7 +46,7 @@ jobs:
 
       - name: Retrieve Org1 Metadata
         run: |
-          # Use a non-conflicting directory for retrieval
+          # Retrieve into a non-conflicting directory "org1-retrieve"
           sf project retrieve start --target-org $ORG1_ALIAS --output-dir org1-retrieve
 
       - name: Authenticate to Org2
@@ -54,13 +56,12 @@ jobs:
 
       - name: Retrieve Org2 Metadata
         run: |
-          # Use a non-conflicting directory for retrieval
+          # Retrieve into a non-conflicting directory "org2-retrieve"
           sf project retrieve start --target-org $ORG2_ALIAS --output-dir org2-retrieve
 
       - name: Generate Delta Package
         run: |
           mkdir -p delta
-          # Compare the two retrieved directories to generate the difference package
           sf sgd source delta --source org1-retrieve --target org2-retrieve --output delta
           echo "Generated delta package:"
           ls -la delta/
