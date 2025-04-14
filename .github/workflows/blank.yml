@@ -6,7 +6,6 @@ on:
 jobs:
   compare-metadata:
     runs-on: ubuntu-latest
-
     env:
       ORG1_ALIAS: Org1
       ORG2_ALIAS: Org2
@@ -25,19 +24,53 @@ jobs:
           npm install -g @salesforce/cli
           sf plugins install sfdx-git-delta
 
-      - name: Create Salesforce DX Project and Prepare Directories
+      - name: Create Salesforce DX Project
         run: |
-          # Generate the project with default package directory "force-app"
-          sf project generate --name MetadataCompare --default-package-dir force-app
-          # Ensure the "force-app" folder exists as declared in the configuration
+          # Generate a minimal Salesforce DX project if not already present.
+          if [ ! -f sfdx-project.json ]; then
+            sf project generate --name MetadataCompare --default-package-dir force-app
+          fi
+          # Ensure the default folder exists
           mkdir -p force-app
-          # Overwrite sfdx-project.json with a configuration that only declares a single, existing package directory
-          echo '{
-            "packageDirectories": [
-              {"path": "force-app", "default": true}
-            ],
-            "sourceApiVersion": "58.0"
-          }' > sfdx-project.json
+          # Create minimal sfdx-project.json if needed.
+          if [ ! -f sfdx-project.json ]; then
+            echo '{
+              "packageDirectories": [
+                {"path": "force-app", "default": true}
+              ],
+              "sourceApiVersion": "58.0"
+            }' > sfdx-project.json
+          fi
+
+      - name: Create Package Manifest
+        run: |
+          cat <<'EOF' > package.xml
+          <?xml version="1.0" encoding="UTF-8"?>
+          <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+            <types>
+              <members>*</members>
+              <name>ApexClass</name>
+            </types>
+            <types>
+              <members>*</members>
+              <name>ApexTrigger</name>
+            </types>
+            <types>
+              <members>*</members>
+              <name>CustomObject</name>
+            </types>
+            <types>
+              <members>*</members>
+              <name>LightningComponentBundle</name>
+            </types>
+            <types>
+              <members>*</members>
+              <name>StaticResource</name>
+            </types>
+            <!-- Add additional metadata types as needed -->
+            <version>58.0</version>
+          </Package>
+          EOF
 
       - name: Authenticate to Org1
         run: |
@@ -46,8 +79,9 @@ jobs:
 
       - name: Retrieve Org1 Metadata
         run: |
-          # Retrieve into a non-conflicting directory "org1-retrieve"
-          sf project retrieve start --target-org $ORG1_ALIAS --output-dir org1-retrieve
+          mkdir -p org1-retrieve
+          # Using manifest-based retrieve so that source tracking isn’t required
+          sfdx force:source:retrieve -x package.xml -u $ORG1_ALIAS --target-metadata-dir org1-retrieve
 
       - name: Authenticate to Org2
         run: |
@@ -56,12 +90,13 @@ jobs:
 
       - name: Retrieve Org2 Metadata
         run: |
-          # Retrieve into a non-conflicting directory "org2-retrieve"
-          sf project retrieve start --target-org $ORG2_ALIAS --output-dir org2-retrieve
+          mkdir -p org2-retrieve
+          sfdx force:source:retrieve -x package.xml -u $ORG2_ALIAS --target-metadata-dir org2-retrieve
 
       - name: Generate Delta Package
         run: |
           mkdir -p delta
+          # Compare the retrieved metadata directories and generate the delta package
           sf sgd source delta --source org1-retrieve --target org2-retrieve --output delta
           echo "Generated delta package:"
           ls -la delta/
