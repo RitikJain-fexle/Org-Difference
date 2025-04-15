@@ -61,7 +61,7 @@ jobs:
           mkdir -p org1-retrieve
           # Generate config file for main branch
           mkdir -p config/branches
-          sf project retrieve start --manifest manifest/allmetadataorg1.xml --output-dir org1-retrieve
+          sf project retrieve start --manifest manifest/allmetadataorg1.xml --output-dir org1-retrieve --target-org $ORG1_ALIAS
 
       - name: Authenticate to Org2
         run: |
@@ -77,11 +77,25 @@ jobs:
         run: |
           sfdx force source manifest create --from-org $ORG2_ALIAS --manifestname=allmetadataorg2 --output-dir manifest
 
+      - name: Retrieve org2 metadata
+        run: |
+          mkdir -p org2-retrieve
+          # Generate config file for main branch
+          mkdir -p config/branches
+          sf project retrieve start --manifest manifest/allmetadataorg2.xml --output-dir org2-retrieve --target-org $ORG2_ALIAS
+          
+      - name: Generate Delta Package
+        run: |
+          mkdir -p delta
+          sf sgd source delta --source org1-retrieve --target org2-retrieve --output delta
+          echo "Generated delta package:"
+          ls -la delta/
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: manifest-packages
-          path: manifest/
+          name: metadata-delta-package
+          path: delta/
 
       - name: Clean Up
         if: always()
