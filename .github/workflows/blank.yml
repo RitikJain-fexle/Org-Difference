@@ -56,6 +56,13 @@ jobs:
         run: |
           sfdx force source manifest create --from-org $ORG1_ALIAS --manifestname=allmetadataorg1 --output-dir manifest
 
+      - name: Retrieve org1 metadata
+        run: |
+          mkdir -p org1-retrieve
+          # Generate config file for main branch
+          mkdir -p config/branches
+          sf project retrieve start --manifest manifest/allmetadataorg1.xml --output-dir org1-retrieve
+
       - name: Authenticate to Org2
         run: |
           echo "${{ secrets.SFDX_AUTH_ORG2_URL }}" > auth-org2.txt
