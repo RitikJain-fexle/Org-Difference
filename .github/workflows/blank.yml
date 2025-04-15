@@ -50,6 +50,10 @@ jobs:
           sf org list
           sf org display --target-org $ORG1_ALIAS
 
+      - name: Update org1 package file with complete metadata
+        run: |
+          sfdx force source manifest create --fromorg $ORG1_ALIAS --manifestname=allmetadataorg1 --outputdir manifest
+
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
