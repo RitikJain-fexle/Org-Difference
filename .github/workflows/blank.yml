@@ -15,6 +15,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Ensure we persist the credentials so we can push changes
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -68,6 +70,20 @@ jobs:
         run: |
           sfdx force source manifest create --from-org $ORG2_ALIAS --manifestname=allmetadataorg2 --output-dir manifest
 
-      - name: Clean Up
+      - name: Commit and Push Generated Files to Main Branch
+        run: |
+          # Configure git with a bot identity
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # Check for changes; if there are any, add, commit, and push them.
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "Update metadata manifests and project files"
+            git push origin HEAD:${{ github.ref }}
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Clean Up Authentication Files
         if: always()
         run: rm -f auth-org*.txt
