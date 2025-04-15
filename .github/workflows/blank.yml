@@ -50,10 +50,6 @@ jobs:
           sf org list
           sf org display --target-org $ORG1_ALIAS
 
-      - name: Login to SF environment
-        run: |
-          echo "$SFDX_AUTH_ORG1_URL" | sf org login sfdx-url --sfdx-url-stdin  --set-default --alias ritikOrg1
-
       - name: Retrieve Org1 Metadata via Hardis Plugin
         run: |
           mkdir -p org1-retrieve
