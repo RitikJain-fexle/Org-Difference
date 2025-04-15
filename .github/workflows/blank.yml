@@ -68,19 +68,6 @@ jobs:
         run: |
           sfdx force source manifest create --from-org $ORG2_ALIAS --manifestname=allmetadataorg2 --output-dir manifest
 
-      - name: Generate Delta Package
-        run: |
-          mkdir -p delta
-          sf sgd source delta --source org1-retrieve --target org2-retrieve --output delta
-          echo "Generated delta package:"
-          ls -la delta/
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: metadata-delta-package
-          path: delta/
-
       - name: Clean Up
         if: always()
         run: rm -f auth-org*.txt
