@@ -26,8 +26,8 @@ jobs:
       - name: Install Salesforce CLI and Plugins
         run: |
           npm install -g @salesforce/cli
-          sf plugins install sfdx-git-delta
-          sf plugins install sfdx-hardis@5.24.0
+          echo y | sf plugins install sfdx-git-delta
+          echo y | sf plugins install sfdx-hardis@5.24.0
 
       - name: Create Salesforce DX Project and Prepare Directories
         run: |
@@ -70,20 +70,12 @@ jobs:
         run: |
           sfdx force source manifest create --from-org $ORG2_ALIAS --manifestname=allmetadataorg2 --output-dir manifest
 
-      - name: Commit and Push Generated Files to Main Branch
-        run: |
-          # Configure git with a bot identity
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          # Check for changes; if there are any, add, commit, and push them.
-          if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            git commit -m "Update metadata manifests and project files"
-            git push origin HEAD:${{ github.ref }}
-          else
-            echo "No changes to commit."
-          fi
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: metadata-delta-package
+          path: delta/
 
-      - name: Clean Up Authentication Files
+      - name: Clean Up
         if: always()
         run: rm -f auth-org*.txt
