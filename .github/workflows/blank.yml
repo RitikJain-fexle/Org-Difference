@@ -52,15 +52,7 @@ jobs:
 
       - name: Update org1 package file with complete metadata
         run: |
-          sfdx force source manifest create --fromorg $ORG1_ALIAS --manifestname=allmetadataorg1 --outputdir manifest
-
-      - name: Retrieve Org1 Metadata via Hardis Plugin
-        run: |
-          mkdir -p org1-retrieve
-          # Generate config file for main branch
-          mkdir -p config/branches
-          echo "targetUsername: $ORG1_ALIAS" > config/branches/.sfdx-hardis.main.yml
-          sf hardis:org:monitor:backup --target-org $ORG1_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org1-retrieve
+          sfdx force source manifest create --from-org $ORG1_ALIAS --manifestname=allmetadataorg1 --output-dir manifest
 
       - name: Authenticate to Org2
         run: |
@@ -72,13 +64,9 @@ jobs:
           sf org list
           sf org display --target-org $ORG2_ALIAS
 
-      - name: Retrieve Org2 Metadata via Hardis Plugin
+      - name: Update org2 package file with complete metadata
         run: |
-          mkdir -p org2-retrieve
-          # Update config file for main branch to point to Org2
-          mkdir -p config/branches
-          echo "targetUsername: $ORG2_ALIAS" > config/branches/.sfdx-hardis.main.yml
-          sf hardis:org:monitor:backup --target-org $ORG2_ALIAS --full --exclude-namespaces --full-apply-filters --output-dir org2-retrieve
+          sfdx force source manifest create --from-org $ORG2_ALIAS --manifestname=allmetadataorg2 --output-dir manifest
 
       - name: Generate Delta Package
         run: |
