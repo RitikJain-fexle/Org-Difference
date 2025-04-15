@@ -24,8 +24,8 @@ jobs:
       - name: Install Salesforce CLI and Plugins
         run: |
           npm install -g @salesforce/cli
-          echo y | sf plugins install sfdx-git-delta
-          echo y | sf plugins install sfdx-hardis@5.24.0
+          sf plugins install sfdx-git-delta
+          sf plugins install sfdx-hardis@5.24.0
 
       - name: Create Salesforce DX Project and Prepare Directories
         run: |
