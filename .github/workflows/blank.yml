@@ -23,11 +23,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Salesforce CLI and Plugins
+      - name: Install Salesforce CLI
         run: |
           npm install -g @salesforce/cli
+
+      - name: Install SFDX Delta
+        run: |
           echo y | sf plugins install sfdx-git-delta
+
+      - name: Install SFDX Hardis
+        run: |
           echo y | sf plugins install sfdx-hardis@5.24.0
+
+      - name: Install SFDX Devops
+        run: |
+          npm install -g sfdx-devops
 
       - name: Create Salesforce DX Project and Prepare Directories
         run: |
@@ -84,12 +94,10 @@ jobs:
           mkdir -p config/branches
           sf project retrieve start --manifest manifest/allmetadataorg2.xml --output-dir org2-retrieve --target-org $ORG2_ALIAS
           
-      - name: Generate Delta Package
+      - name: Compare Metadata
         run: |
           mkdir -p delta
-          sf sgd source delta --from org1-retrieve --to org2-retrieve --output delta
-          echo "Generated delta package:"
-          ls -la delta/
+          sfdx devops:mdsource:compare:build -b org1-retrieve -c org2-retrieve -o delta 
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
